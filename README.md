@@ -1,56 +1,142 @@
 # **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
+[//]: # (Image References)
 
-Overview
+[white_select_image]: ./test_images_output/white_select_solidYellowCurve2.jpg "WhiteGraySelect"
+[yellow_select_image]: ./test_images_output/yellow_select_solidYellowCurve2.jpg "YellowGraySelect"
+[color_select_image]: ./test_images_output/color_select_solidYellowCurve2.jpg "ColorSelect"
+[edge_image]: ./test_images_output/edge_solidYellowCurve2.jpg "Edge"
+[region_select_image]: ./test_images_output/region_select_solidYellowCurve2.jpg "RegionSelect"
+[line_segment_image]: ./test_images_output/line_segment_solidYellowCurve2.jpg "LineSegment"
+[line_image]: ./test_images_output/line_solidYellowCurve2.jpg "LaneLine"
+[annotated_image]: ./test_images_output/solidYellowCurve2.jpg "LaneLine"
+
+## The Overview
+
+In this project, I designed a pipeline to process the videos taken from car on different road condition, identified the left and right lanes the car is in, and draw an annotation lines to mark the lanes found. The left lane and right lane are identified almost all the time except in two frames of the challenge video, the right lane is not identified.
+
 ---
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
+## The Pipeline
 
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
+My pipeline for finding the lane consists of 5 major steps:
 
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
-
-
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
-
-1. Describe the pipeline
-
-2. Identify any shortcomings
-
-3. Suggest possible improvements
-
-We encourage using images in your writeup to demonstrate how your pipeline works.  
-
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
-
-
-The Project
 ---
 
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
+### 1. Color Filter and Gray Scale
 
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/83ec35ee-1e02-48a5-bdb7-d244bd47c2dc/lessons/8c82408b-a217-4d09-b81d-1bda4c6380ef/concepts/4f1870e0-3849-43e4-b670-12e6f2d4b7a7) if you haven't already.
+Because the lanes are all in yellow or white color in the videos, I use color filtering to first filter out the information we're not interested. This step is not very critical for solidWhiteRight.mp4 and solidYellowLeft.mp4 but is necessary for the challenge.mp4. The reason is because the challenge.mp4 has tree shadow on the road, and the edges along the left side dividor. Those information can't be filter out by the pipeline below and will eventually be identified as line segments as the lane. 
 
-**Step 2:** Open the code in a Jupyter Notebook
+In this step, I did the follow:
+### *Filter the white color*
+First convert the image from RGB format to HSV format. Then select the white color with specific HSV range. Because in challenge video I noticed some times the lane segment under the tree shadow were not found, I converted the image to grayscale and then use cv2.THRESH_BINARY to convert the intensity from 200 above to 255, and intensity below 200 to 0. I hope this threshold conversion can make the white lane more stand out for the pipeline afterwards. It does seem help a little bit. 
 
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out <A HREF="https://www.packtpub.com/books/content/basics-jupyter-notebook-and-python" target="_blank">Cyrille Rossant's Basics of Jupyter Notebook and Python</A> to get started.
+The picture below showed the image with white color selected in grayscale:
 
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
+![alt text][white_select_image]
 
-`> jupyter notebook`
+---
 
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
+### *Filter the yellow color*
+Do the similar color selection for yellow color. The picture below showed the image with yellow color selected in grayscale:
 
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
+![alt text][yellow_select_image]
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+---
 
+### *Combine two images*
+Then I combined the white selected image and yellow selected image together with cv2.bitwise_or function.
+
+![alt text][color_select_image]
+
+---
+
+### 2. Edge Detection
+
+### *Gaussian Blurring*
+First use gaussian_blur() function with kernal size 7 to smooth out some noise. I didn't find the size of kernel matter too much. 
+
+### *Canny Edge*
+Then use canny edge detection algorithm to convert the image to edge image as shown below.
+
+![alt text][edge_image]
+
+---
+
+### 3. Region Select
+
+After the edge detection and conversion to edge image, I use region selection to select the interested area of the lanes. This is useful to filter out the nearby lanes and the nearby white or yellow cars. I defined a trapezoid region with four corners:
+1. $(0, height)$ -- left lower corner
+2. $(length, height)$ -- right lower corner
+3. $(length\times0.5 + 50, height\times0.55)$ -- the right upper corner
+4. $(length\times0.5 - 50, height\times0.55)$ -- the left upper corner
+
+The is the image after region select
+![alt text][region_select_image]
+
+---
+
+### 4. Line Segment Detection
+
+With a region select image, the information in the image are mostly the lane segments. Use the hough line detection to detect the line segments of the lanes. 
+
+![alt text][line_segment_image]
+
+
+---
+
+## Improvements to draw_lines() 
+After the line segments were detected successfully, I modified the draw_lines() function to improve the final result. Now the image with the improved line drawing looks like the following image:
+
+![alt text][line_image]
+
+The improvement I did are:
+---
+### Filter out the nearly horizontal lines
+I noticed in the video, somethings there are horizonal lines with the same color and shape as the lane lines. However, they're not lane lines, they're just some markers from the lane. So I calculate the slope of all the line segments, if the absolute value of the line's slope is less than 0.2, I assume that line is too horizontal to be a lane segment. I just drop it.
+
+---
+### Partition the line segments into left lane and right lane
+I group the line segment points into left lane and right lane by the slope of the line segment. If the slope is negative, it belongs to the left lane, otherwise, it belongs to the right now. We already filter out the small slope line segment in previous step, so slope can't be zero in this step. In fact, the left lane segments have slope less than -0.2, and the right lane segments have slope greater than 0.2.
+
+In addition, I also partition the line segments by their position. If a line segment's slope showing it belonging to the right lane, but its position shows it's on the left side of the image, I assume it is noise instead of lane line segment. It will be dropped. Similar policy also applies to left lane segment filtering.
+
+---
+### Extrapolate the lane segments
+After the line segments filtered and grouped the points on line segments into left lane and right lane groups, I then use the np.polyfit function to extrapolate the linear line fit to all the points on left lane and right lane. After the linear function is found for left lane and right lane, we find the slope and the intercept of the left lane and right lane. Then I choose the two end points for each lane. The points are selected by the Y value, one point has $Y=length$, and the other point has $Y=length\times0.65$. The X value is calculated from Y value with the slope and intercept of the lines.
+
+
+## The Annotated Image
+
+With the pipeline and the drawline() improvement, the lane lines are found. Add the lane lines to the original image, we can get the image with the lane lines annotated.
+
+![alt text][annotated_image]
+
+---
+
+## The Limitations
+
+There are a few limitations of this solution:
+
+1. The extrapolation algorithm assumes straight line for the lanes. But in a very curved road, it won't be a straight line for the lanes, this algorithm can show some weird result. In fact, for challenge video, it already shows not working well with curves.
+
+2. The parameters for each stage of the pipeline are hard coded. I had spent lots of time to try different parameters, sometimes it works well with the test images, but then it doesn't work well on some frames from videos. So I think the hard coded parameters won't work well in all scenarios. When the light condition changes, or the road changes, the hard coded parameters can't adapt to all the cases.
+
+3. The region select algorithm defines a trapezoid zone in front of the car. But quite often, there are markers on the road, for example EXIT or STOP words are written on the group, they're often in white/yellow color and they have clear edge. It is hard to filter them out by the current pipeline.
+
+
+## Future Improvements
+
+### Line Extrapolation 
+
+The line extrapolation algorithm can be improved to consider the curved road. So instead of drawing a single straight line, maybe it can draw multiple shorter straigh lines to form a curved lane line.
+
+### Guess the Lane Lines
+In the challenge video, my algorithm has some trouble to detect the lane lines in a few frames. It might be able to be improved by better tuned parameters, however, I tried to tune different parameters but it doesn't help much. In real life, sometimes the lane lines can be worn out and not be visible. But human can guess the lane lines based on previous lane lines location. I think self-driving car should also be able to guess the lane lines when we can't detect any lane line. The guess algorithm can guess the position of the lanes based on previous frames assuming the road should not have a sharp change in a second. It can also identify other objects along the road like the curb, or the dividor, or even other cars. Based on the changes of the other objects, it can guess the lanes' changes from previous frames.
+
+### Adaptive Parameters
+The parameters in the pipeline can't be hard coded for all the road and light conditions. The color filtering algorithm definitely needs to change the threshold based on the actual color of the lanes and the light condition. The light can give elusion of the colors.
+
+### Region Select
+The region select algorithm can be improve to select a better defined region so we can filter out the markers on the group. For example, we can select the region for left lane only, and right lane only. The region in the center in front of us should not be lane, and it should not be selected. 
